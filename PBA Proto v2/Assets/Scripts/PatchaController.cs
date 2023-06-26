@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PatchaController : MonoBehaviour
 {
@@ -13,25 +14,57 @@ public class PatchaController : MonoBehaviour
 
     // Movement variables
     public float speed = 10f;
-    public float jumpForce = 10f;
-    public Vector3 movement;
+   
+    public Vector2 move;
 
     // Component References
-    private Rigidbody Rbody;
-    public bool isGrounded; // Flag to track if the player is grounded
-
+    private Rigidbody rb;
+   
     // Script References
     public HealthBar healthBar;
+
+    // Jumping Variables
+    public float jumpForce = 10f;
+    public bool isJumpPressed;
+    public float fallMultiplier = 2.5f;
+    public float lowJumpMultiplier = 2f;
+
+    private void OnEnable()
+    {
+        InputSystem.EnableDevice((InputSystem.GetDevice<Keyboard>()));
+    }
+
+    private void OnDisable()
+    {
+        InputSystem.DisableDevice((InputSystem.GetDevice<Keyboard>()));
+    }
 
     // Start is called before the first frame update
     void Start()
     {
         // Initialise components
-        Rbody = GetComponent<Rigidbody>();
+        rb = GetComponent<Rigidbody>();
 
         // Initialise variables
         currentHealth = maxHealth;
         healthBar.SetMaxHealth(maxHealth);
+    }
+
+    public void OnMove(InputAction.CallbackContext context)
+    {
+        move = context.ReadValue<Vector3>();
+    }
+
+    public void OnJump(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            isJumpPressed = true;
+        }
+        else if (context.canceled)
+        {
+            isJumpPressed = false;
+        }
     }
 
     // Update is called once per frame
@@ -66,20 +99,45 @@ public class PatchaController : MonoBehaviour
             pickupCounter = 0;
             Debug.Log("You have gained a life from Pickups");
         }
-        // Movement code
-        movement = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
 
-        // Jumping input
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        movePlayer();
+        handleJump();
+        
+    }
+
+    public void movePlayer()
+    {
+        Vector3 movement = new Vector3(move.x, 0f, move.y);
+
+        if (movement != Vector3.zero)
         {
-            Jump();
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(movement), 0.15f );
+        }
+
+        transform.Translate(movement * speed * Time.deltaTime, Space.World);
+    }
+
+    private void handleJump()
+    {
+        if (isJumpPressed)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            isJumpPressed = false;
+        }
+
+        if (rb.velocity.y < 0) // If the character is falling
+        {
+            rb.velocity += Vector3.up * Physics.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
+        }
+
+        else if
+            (rb.velocity.y > 0 && !isJumpPressed) // i.e if the character releases the jump button mid-jump for a lower jump
+        {
+            rb.velocity += Vector3.up * Physics.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
         }
     }
 
-    void FixedUpdate()
-    {
-        MoveChar(movement);
-    }
+    
 
     // Custom Functions for Patcha
     void TakeDamage(int damage)
@@ -112,30 +170,8 @@ public class PatchaController : MonoBehaviour
         Debug.Log("You have picked up a coin");
     }
 
-    void MoveChar(Vector3 direction)
-    {
-        Rbody.velocity = direction * speed;
-    }
 
-    void Jump()
-    {
-        Rbody.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-    }
 
-    // Detect if the player is grounded
-    void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Ground"))
-        {
-            isGrounded = true;
-        }
-    }
 
-    void OnCollisionExit(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Ground"))
-        {
-            isGrounded = false;
-        }
-    }
+  
 }
