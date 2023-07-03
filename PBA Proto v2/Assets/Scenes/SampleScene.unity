@@ -340,10 +340,10 @@ MonoBehaviour:
   speed: 10
   move: {x: 0, y: 0}
   healthBar: {fileID: 1832775024}
-  jumpForce: 50
+  jumpForce: 40
   isJumpPressed: 0
-  fallMultiplier: 2.5
-  lowJumpMultiplier: 2
+  fallMultiplier: 1.5
+  lowJumpMultiplier: 1
 --- !u!136 &263446105
 CapsuleCollider:
   m_ObjectHideFlags: 0
